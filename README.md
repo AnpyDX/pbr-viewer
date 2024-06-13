@@ -26,7 +26,7 @@ So basically this project is a graphics-tech toy and I do recommend you consider
 - [mas](https://github.com/anpydx/mas) simple math support.
 - [bmx](https://github.com/anpydx/bmx) bmx shader format support.
 
-**additional font:** `Cascadia` `Font-Awesome`
+**additional fonts:** `Cascadia`, `Font-Awesome`
 
 ## references
 - [LearnOpenGL-CN](https://learnopengl-cn.github.io/)
