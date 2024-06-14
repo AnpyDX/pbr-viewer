@@ -1,4 +1,5 @@
 #include "camera.h"
+#include <cmath>
 
 namespace PBRV {
     Camera::Camera(mas::vec3 position, mas::vec3 center, mas::vec3 up) {
@@ -9,8 +10,12 @@ namespace PBRV {
     }
 
     mas::mat4 Camera::get_lookat() {
-        mas::mat4 result {};
-        result = mas::lookAt(position, position + front, up);
+        direction = front * std::cos(mas::radians(yaw)) + left * std::sin(mas::radians(yaw)) + up * std::tan(mas::radians(pitch));
+        direction = mas::normalize(direction);
+        mas::vec3 cam_left = mas::normalize(mas::cross(mas::vec3(0.0, 1.0, 0.0), direction));
+        mas::vec3 cam_up = mas::normalize(mas::cross(direction, cam_left));
+        
+        mas::mat4 result = mas::lookAt(position, position + direction, cam_up);
         return result;
     }
 
@@ -20,26 +25,7 @@ namespace PBRV {
     }
 
     void Camera::view_controller(float right_offset, float up_offset) {
-        mas::vec4 direction(front, 0.0);
-        mas::mat4 rotation_mat(1.0);
-        rotation_mat = mas::rotate(rotation_mat, up, -right_offset);
-        direction = rotation_mat * direction;
-        front.x = direction.x;
-        front.y = direction.y;
-        front.z = direction.z;
-
-        left = mas::normalize(mas::cross(up, front));
-        
-        rotation_mat = mas::mat4(1.0);
-        rotation_mat = mas::rotate(rotation_mat, left, -up_offset);
-        direction = mas::vec4(front, 0.0);
-        direction = rotation_mat * direction;
-        front.x = direction.x;
-        front.y = direction.y;
-        front.z = direction.z;
-
-        up = mas::normalize(mas::cross(front, left));
+        yaw -= right_offset;
+        pitch += up_offset;
     }
-
-
 }

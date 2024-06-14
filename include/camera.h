@@ -22,8 +22,16 @@ namespace PBRV {
 
     public:
         mas::vec3 position {};
+        mas::vec3 direction {};
+
+    private:
+        // initial camera coord
         mas::vec3 front {};
         mas::vec3 left {};
         mas::vec3 up {};
+
+        // camera view
+        float yaw = 0.0f;
+        float pitch = 0.0f;
     };
 }
