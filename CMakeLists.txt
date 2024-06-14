@@ -1,7 +1,7 @@
 # PBR-Viewer CMakeProject
 cmake_minimum_required(VERSION 3.8)
 
-project("PBR-Viewer")
+project("PBRV")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -20,7 +20,7 @@ set(
 )
 
 add_executable(
-    "PBR-Viewer"
+    "PBRV"
     src/main.cpp
     ${PBRV_SOURCES}
     ${IMGUI_SOURCES}
@@ -36,16 +36,17 @@ target_include_directories(
     ${EXTERNAL_MAS_DIR}/include
     ${EXTERNAL_IMGUI_DIR}/include
     ${EXTERNAL_FONTCPP_DIR}/include
+    ${EXTERNAL_JSON_DIR}/include
 )
 
 # link libraries 
 if(WIN32)
     target_link_libraries(
-        "PBR-Viewer" glfw bmx opengl32
+        "PBRV" glfw bmx opengl32
     )
 elseif(UNIX)
     target_link_libraries(
-        "PBR-Viewer" glfw bmx GL X11 Xrandr Xi
+        "PBRV" glfw bmx GL X11 Xrandr Xi
     )
 else()
     message(FATAL_ERROR "Project does not support current platform!")
