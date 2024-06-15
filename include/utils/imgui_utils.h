@@ -67,7 +67,7 @@ namespace PBRV {
         int counter = 0;
         for (auto c : in_str) {
             if (counter == count) {
-                out_string.append("\n");
+                out_string.append("\n     ");
                 counter = 0;
             }
             out_string.append(std::string(1, c));

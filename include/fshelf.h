@@ -4,10 +4,10 @@
  */
 
 #pragma once
-#include <fstream>
 #include <vector>
 
 namespace PBRV {
+    template <typename T>
     class FileShelf {
     public:
         FileShelf(const FileShelf&) = delete;
@@ -21,7 +21,7 @@ namespace PBRV {
         }
 
         // TODO useless std::move
-        inline std::fstream& add(std::fstream&& file) {
+        inline T& add(T&& file) {
             if (max_file > 0 && m_files.size() == max_file) {
                 clear();
             }
@@ -31,14 +31,14 @@ namespace PBRV {
         }
 
         inline void clear() {
-            for (std::fstream& f : m_files) {
+            for (T& f : m_files) {
                 f.close();
             }
             m_files.clear();
         }
 
     private:
-        std::vector<std::fstream> m_files{};
+        std::vector<T> m_files{};
         int max_file = -1;
     };
 }

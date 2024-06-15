@@ -1,4 +1,5 @@
-﻿#define MAS_UTYPE_FLOAT
+﻿#include "imgui/imgui.h"
+#define MAS_UTYPE_FLOAT
 
 #include <cstdlib>
 #include <stdexcept>
@@ -22,7 +23,7 @@
 #include "fshelf.h"
 #include "camera.h"
 
-static PBRV::FileShelf FS {};
+static PBRV::FileShelf<std::fstream> FS {};
 
 struct VertexType {
     mas::vec3 position;
@@ -70,9 +71,10 @@ private:
             throw std::runtime_error("failed to initialize GLAD!");
         }
 
-        // glfwSwapInterval(true); // enable v-sync
+        glfwSwapInterval(true); // enable v-sync
         glfwSetWindowUserPointer(app_window, reinterpret_cast<void*>(this));
 
+        // get profiler information
         const GLubyte *temp_glubv;
         std::vector<std::string> temp_str_vector{};
         temp_glubv = glGetString(GL_VERSION);
@@ -283,21 +285,23 @@ private:
         app_camera->position_controller(camera_movement.z, camera_movement.x);
 
         if (glfwGetMouseButton(app_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            glfwSetInputMode(app_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            if (!ImGui::IsAnyItemActive()) {
+                glfwSetInputMode(app_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             
-            double xpos, ypos;
-            glfwGetCursorPos(app_window, &xpos, &ypos);
-            if (!mouse_press_released) {
-                mas::vec2 view_offset(xpos - last_mouse_pos.x, last_mouse_pos.y - ypos);
-                view_offset = view_offset * camera_sensivity * delta_time;
-                app_camera->view_controller(view_offset.x, view_offset.y);
-            }
-            else {
-                mouse_press_released = false;
-            }
+                double xpos, ypos;
+                glfwGetCursorPos(app_window, &xpos, &ypos);
+                if (!mouse_press_released) {
+                    mas::vec2 view_offset(xpos - last_mouse_pos.x, last_mouse_pos.y - ypos);
+                    view_offset = view_offset * camera_sensivity * delta_time;
+                    app_camera->view_controller(view_offset.x, view_offset.y);
+                }
+                else {
+                    mouse_press_released = false;
+                }
 
-            last_mouse_pos.x = static_cast<float>(xpos);
-            last_mouse_pos.y = static_cast<float>(ypos);
+                last_mouse_pos.x = static_cast<float>(xpos);
+                last_mouse_pos.y = static_cast<float>(ypos);
+            }
         }
         else {
             glfwSetInputMode(app_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -418,7 +422,7 @@ private:
 
     std::unique_ptr<PBRV::Camera> app_camera;
     float camera_speed = 0.5f;
-    float camera_sensivity = 0.5f;
+    float camera_sensivity = 0.8f;
     bool mouse_press_released = true;
     mas::vec2 last_mouse_pos {0.0f};
 };
