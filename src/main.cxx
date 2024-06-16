@@ -1,5 +1,4 @@
-﻿#include "imgui/imgui.h"
-#define MAS_UTYPE_FLOAT
+﻿#define MAS_UTYPE_FLOAT
 
 #include <cstdlib>
 #include <stdexcept>
@@ -71,7 +70,7 @@ private:
             throw std::runtime_error("failed to initialize GLAD!");
         }
 
-        glfwSwapInterval(true); // enable v-sync
+        // glfwSwapInterval(true); // enable v-sync
         glfwSetWindowUserPointer(app_window, reinterpret_cast<void*>(this));
 
         // get profiler information
@@ -428,16 +427,16 @@ private:
 };
 
 int main() {
-    int exit_success = true;
+    int exit_success = 0;
 
     try {
         PBRViewerApplication application{};
     }
     catch (const std::exception& e) {
         PBRV::Console.warning(e.what());
-        exit_success = false;
+        exit_success = -1;
     }
 
     FS.clear();
-    return (EXIT_SUCCESS ? EXIT_FAILURE : exit_success);
+    return exit_success;
 }

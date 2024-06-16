@@ -1,4 +1,4 @@
 build/
-vs-debug/
+.vscode/
+.xmake/
 TODO
-workflow.py
