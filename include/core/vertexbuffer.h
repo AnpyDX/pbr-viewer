@@ -66,7 +66,7 @@ namespace PBRV {
         VertexBuffer(const VertexBuffer&) = delete;
         VertexBuffer& operator=(const VertexBuffer&) = delete;
 
-        VertexBuffer(VertexBufferInfo& create_info);
+        explicit VertexBuffer(VertexBufferInfo& create_info);
         ~VertexBuffer();
 
         // get VAO id

@@ -15,7 +15,7 @@ namespace PBRV {
         Framebuffer operator=(const Framebuffer&) = delete;
 
         // argu <width, height> only need to be set when has_depth_stencil = true
-        Framebuffer(GLuint color_attachment, bool has_depth_stencil = false, int width = 0, int height = 0);
+        explicit Framebuffer(GLuint color_attachment, bool has_depth_stencil = false, int width = 0, int height = 0);
         ~Framebuffer();
 
         // bind GL_FRAMEBUFFER0
@@ -33,7 +33,7 @@ namespace PBRV {
     private:
         bool has_destroyed = true;
         bool has_rbo = false;
-        GLuint m_id;
-        GLuint m_rbo_id;
+        GLuint m_id = 0;
+        GLuint m_rbo_id = 0;
     };
 }

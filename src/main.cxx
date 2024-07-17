@@ -1,12 +1,10 @@
 ﻿#define MAS_UTYPE_FLOAT
-
-#include <cstdlib>
 #include <stdexcept>
 #include <fstream>
 #include <string>
 #include <memory>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <mas/mas.hpp>
 
@@ -19,10 +17,8 @@
 #include "core/texture.h"
 #include "core/framebuffer.h"
 
-#include "fshelf.h"
-#include "camera.h"
-
-static PBRV::FileShelf<std::fstream> FS {};
+#include "Camera.h"
+#include "SceneManager.h"
 
 struct VertexType {
     mas::vec3 position;
@@ -57,7 +53,7 @@ private:
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        app_window = glfwCreateWindow(800, 600, "PBR Viewer", nullptr, nullptr);
+        app_window = glfwCreateWindow(1920, 1080, "PBR Viewer", nullptr, nullptr);
         if (app_window == nullptr) {
             glfwTerminate();
             throw std::runtime_error("failed to create window!");
@@ -65,12 +61,13 @@ private:
         glfwMakeContextCurrent(app_window);
         glfwSetFramebufferSizeCallback(app_window, framebuffer_resize_callback);
 
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        int version = gladLoadGL(glfwGetProcAddress);
+        if (version == 0) {
             glfwTerminate();
             throw std::runtime_error("failed to initialize GLAD!");
         }
 
-        // glfwSwapInterval(true); // enable v-sync
+        glfwSwapInterval(false); // enable v-sync
         glfwSetWindowUserPointer(app_window, reinterpret_cast<void*>(this));
 
         // get profiler information
@@ -88,31 +85,17 @@ private:
 
     void create_resource() {
         // create shader object
-        app_shader = load_shader("assets/shaders/hello_triangle.shader");
+        app_shader = load_shader("assets/shaders/universal_soild.shader");
 
-        // create vertexbuffer object
-        std::vector<VertexType> vertices = {
-            {{ -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f } },
-            {{ 0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f } },
-            {{ 0.0f, 0.5f, 0.0f }, { 0.5f, 1.0f } }
-        };
-        PBRV::VertexBufferInfo vb_info{};
-        vb_info.set_buffer(vertices.data(), vertices.size() * sizeof(VertexType))
-                .add_attribute(0, 3, GL_FLOAT, GL_FALSE, 20, 0)
-                .add_attribute(1, 2, GL_FLOAT, GL_FALSE, 20, 12);
-
-        app_vb = std::make_unique<PBRV::VertexBuffer>(vb_info);
-
-        // create indexbuffer object
-        std::vector<unsigned int> indices = { 0, 1, 2 };
-        app_ib = std::make_unique<PBRV::IndexBuffer>(indices.data(), indices.size() * sizeof(unsigned int));
-
-        // create texture object
-        PBRV::TextureInfo tex_info{};
-        app_tex = std::make_unique<PBRV::Texture>("assets/textures/github.jpg", tex_info);
-
+        // create scene & load models
+        app_scene = std::make_unique<PBRV::SceneManager>();
+        app_scene->add_mesh(
+            PBRV::Model::Builder()
+            .from_file("assets/models/WaterBottle/WaterBottle.gltf")
+        );
+        
         // create camera
-        app_camera = std::make_unique<PBRV::Camera>(mas::vec3(0.0, 0.0, 1.0), mas::vec3(0.0, 0.0, 0.0), mas::vec3(0.0, 1.0, 0.0));
+        app_camera = std::make_unique<PBRV::Camera>(mas::vec3(0.0, 0.0, 2.0), mas::vec3(0.0, 0.0, -2.0), mas::vec3(0.0, 1.0, 0.0));
 
     }
 
@@ -131,27 +114,29 @@ private:
                 .add_attribute(1, 2, GL_FLOAT, GL_FALSE, 20, 12);
         pp_square_vb = std::make_unique<PBRV::VertexBuffer>(vb_info);
 
-        pp_square_ib = std::make_unique<PBRV::IndexBuffer>(square_indices.data(), square_indices.size() * sizeof(unsigned int));
+        pp_square_ib = std::make_unique<PBRV::IndexBuffer>(square_indices.data(), square_indices.size() * sizeof(unsigned int), square_indices.size());
 
         pp_present_shader = load_shader("assets/shaders/frame_present.shader");
         pp_blur_shader = load_shader("assets/shaders/gaussian_blur.shader");
 
-        create_framebuffer_resource(800, 600);
+        create_framebuffer_resource(1920, 1080);
     }
 
     void main_loop() {  
         float time_ticker = 0;
-        int max_gui_blur_times = 200;
+        int max_gui_blur_times = 2;
 
         while (!glfwWindowShouldClose(app_window)) {
-            float current_time = static_cast<float>(glfwGetTime());
+            auto current_time = static_cast<float>(glfwGetTime());
             float delta_time = current_time - time_ticker;
             frame_per_second = 1.0f / delta_time;
             time_ticker = current_time;
 
             detect_input(delta_time);
 
-            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
+            glDepthFunc(GL_LESS);
             glDisable(GL_STENCIL_TEST);
 
             /** Draw Scene */
@@ -163,23 +148,22 @@ private:
             int w, h;
             glfwGetWindowSize(app_window, &w, &h);
             mas::mat4 model(1.0f);
+            model = mas::translate(model, mas::vec3(0.0, 0.0, -2));
+            model = mas::scale(model, mas::vec3(5.0));
             // model = mas::rotate(model, mas::vec3(0.0f, 0.0f, 1.0f), glfwGetTime());
             mas::mat4 view = app_camera->get_lookat();
-            mas::mat4 projection = mas::perspective(45.0f, static_cast<float>(w)/h, 0.1f, 100.0f);
+            mas::mat4 projection = mas::perspective(45.0f, static_cast<float>(w)/static_cast<float>(h), 0.001f, 100.0f);
             
             app_shader->use();
-            app_shader->set_mat4("model", model);
-            app_shader->set_mat4("view", view);
-            app_shader->set_mat4("proj", projection);
-            app_tex->bind_sampler(GL_TEXTURE1);
-            app_shader->set_int("tex1", 1);
+            app_shader->set_mat4("PBRV_Transform_Model", model);
+            app_shader->set_mat4("PBRV_Transform_View", view);
+            app_shader->set_mat4("PBRV_Transform_Projection", projection);
 
-            app_vb->bind();
-            app_ib->bind();
-            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+            app_scene->render(app_shader.get(), pp_framebuffer1.get());
 
             /** Post-Process */
             // clear all depth & stencil info generated by stage "Draw Scene"
+            glDisable(GL_DEPTH_TEST);
             glStencilMask(0xFF);
             glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -265,23 +249,25 @@ private:
             glfwSetWindowShouldClose(app_window, true);
         }
 
-        mas::vec3 camera_movement(0.0f);
+        mas::vec2 camera_movement(0.0f);
         if (glfwGetKey(app_window, GLFW_KEY_W) == GLFW_PRESS) {
-            camera_movement.z += 1.0f * camera_speed * delta_time;
+            camera_movement.y += 1.0f;
         }
 
         if (glfwGetKey(app_window, GLFW_KEY_S) == GLFW_PRESS) {
-            camera_movement.z -= 1.0f * camera_speed * delta_time;
+            camera_movement.y -= 1.0f;
         }
 
         if (glfwGetKey(app_window, GLFW_KEY_A) == GLFW_PRESS) {
-            camera_movement.x -= 1.0f * camera_speed * delta_time;
+            camera_movement.x -= 1.0f;
         }
 
         if (glfwGetKey(app_window, GLFW_KEY_D) == GLFW_PRESS) {
-            camera_movement.x += 1.0f * camera_speed * delta_time;
+            camera_movement.x += 1.0f;
         }
-        app_camera->position_controller(camera_movement.z, camera_movement.x);
+
+        camera_movement = mas::normalize(camera_movement) * camera_speed * delta_time;
+        app_camera->position_controller(camera_movement.y, camera_movement.x);
 
         if (glfwGetMouseButton(app_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             if (!ImGui::IsAnyItemActive()) {
@@ -308,8 +294,9 @@ private:
         }
     }
 
-    std::unique_ptr<PBRV::Shader> load_shader(const std::string& path) {
-        auto& shader_file = FS.add(std::fstream{});
+    static std::unique_ptr<PBRV::Shader> load_shader(const std::string& path) {
+        PBRV::UConsole::debug("loading shader: " + path);
+        std::fstream shader_file {};
         shader_file.exceptions(std::ifstream::badbit);
         shader_file.open(path);
         if (!shader_file.is_open()) {
@@ -361,7 +348,7 @@ private:
         // profiler
         const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(ImVec2(8, 8), ImGuiCond_None);
-        ImGui::SetNextWindowSize(ImVec2(180, 140), ImGuiCond_None);
+        ImGui::SetNextWindowSize(ImVec2(180, 142), ImGuiCond_None);
         {
             ImGuiWindowFlags profiler_window_flags = 0;
             profiler_window_flags |= ImGuiWindowFlags_NoMove;
@@ -386,7 +373,7 @@ private:
                 refresh_time += 1.0f / 60.0f;
             }
 
-            ImGui::PlotLines("avg", values, IM_ARRAYSIZE(values), values_offset, NULL, 0.0f, FLT_MAX, ImVec2(0.0f, 30.0f));
+            ImGui::PlotLines("avg", values, IM_ARRAYSIZE(values), values_offset, nullptr, 0.0f, FLT_MAX, ImVec2(0.0f, 30.0f));
             ImGui::End();
         }
 
@@ -398,9 +385,7 @@ private:
 
     // drawing resources
     std::unique_ptr<PBRV::Shader> app_shader;
-    std::unique_ptr<PBRV::VertexBuffer> app_vb;
-    std::unique_ptr<PBRV::IndexBuffer> app_ib;
-    std::unique_ptr<PBRV::Texture> app_tex;
+    std::unique_ptr<PBRV::SceneManager> app_scene;
 
     // post-process resources
     std::unique_ptr<PBRV::Shader> pp_present_shader;
@@ -412,16 +397,16 @@ private:
     std::unique_ptr<PBRV::Texture> pp_color_attach2;
     std::unique_ptr<PBRV::Framebuffer> pp_framebuffer1;
     std::unique_ptr<PBRV::Framebuffer> pp_framebuffer2 = nullptr;
-    GLuint pp_shared_rbo;
+    GLuint pp_shared_rbo = 0;
 
     // application resouces
     std::string backend_version {};
     std::string gpu_info {};
     float frame_per_second = 0;
 
-    std::unique_ptr<PBRV::Camera> app_camera;
+    std::shared_ptr<PBRV::Camera> app_camera;
     float camera_speed = 0.5f;
-    float camera_sensivity = 0.8f;
+    float camera_sensivity = 1.0f;
     bool mouse_press_released = true;
     mas::vec2 last_mouse_pos {0.0f};
 };
@@ -433,10 +418,9 @@ int main() {
         PBRViewerApplication application{};
     }
     catch (const std::exception& e) {
-        PBRV::Console.warning(e.what());
+        PBRV::UConsole::warning(e.what());
         exit_success = -1;
     }
 
-    FS.clear();
     return exit_success;
 }

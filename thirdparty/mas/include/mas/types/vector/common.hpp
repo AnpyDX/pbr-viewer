@@ -287,7 +287,9 @@ namespace mas {
     */
     template<typename T>
     inline Vector2<T> normalize(const Vector2<T> &v) {
-        return v / static_cast<T>(length(v));
+        double len = length(v);
+        if (len == 0) return v;
+        return v / static_cast<T>(len);
     }
 
     /**
@@ -295,7 +297,9 @@ namespace mas {
     */
     template<typename T>
     inline Vector3<T> normalize(const Vector3<T> &v) {
-        return v / static_cast<T>(length(v));
+        double len = length(v);
+        if (len == 0) return v;
+        return v / static_cast<T>(len);
     }
 
     /**
@@ -303,6 +307,8 @@ namespace mas {
     */
     template<typename T>
     inline Vector4<T> normalize(const Vector4<T> &v) {
-        return v / static_cast<T>(length(v));
+        double len = length(v);
+        if (len == 0) return v;
+        return v / static_cast<T>(len);
     }
 }

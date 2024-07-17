@@ -54,7 +54,7 @@ namespace PBRV {
         return m_id;
     }
 
-    void Texture::bind_sampler(GLenum sampler_id) {
+    void Texture::bind_sampler(GLenum sampler_id) const {
         glActiveTexture(sampler_id);
         glBindTexture(GL_TEXTURE_2D, m_id);
     }

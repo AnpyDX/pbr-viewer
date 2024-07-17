@@ -8,7 +8,8 @@
 #include <iostream>
 
 namespace PBRV {
-    struct Console_T {
+    /** Console Utiility */
+    struct UConsole {
         template <typename T>
         static void debug(const T& msg) {
             std::cout << "\033[1;32m[ Debug ]\033[m " << msg << std::endl;
@@ -19,6 +20,4 @@ namespace PBRV {
             std::cerr << "\033[1;32;31m[ Warning ]\033[m " << msg << std::endl;
         }
     };
-
-    static Console_T Console {};
 }

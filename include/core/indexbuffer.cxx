@@ -3,8 +3,8 @@
 #include <stdexcept>
 
 namespace PBRV {
-    IndexBuffer::IndexBuffer(void* data_ptr, uint32_t size) {
-        if (!data_ptr || size == 0) {
+    IndexBuffer::IndexBuffer(void* data_ptr, uint32_t size, uint32_t count): m_count(count) {
+        if (!data_ptr || size == 0 || count == 0) {
             throw std::runtime_error("indexbuffer get invalid buffer data! Failed to create indexbuffer.");
         }
 
@@ -27,7 +27,11 @@ namespace PBRV {
         return m_id;
     }
 
-    void IndexBuffer::bind() {
+    uint32_t IndexBuffer::get_count() const {
+        return m_count;
+    }
+
+    void IndexBuffer::bind() const {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id);
     }
 }

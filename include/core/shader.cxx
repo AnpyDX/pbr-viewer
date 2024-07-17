@@ -1,12 +1,51 @@
-#include "shader.h"
+﻿#include "shader.h"
 #include "contain_gl.h"
 
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <bmx/bmx.h>
 
-
 namespace {
+    void process_includer(BMX::Data& bmx_data) {
+        std::vector<std::string> process_sections = { "vertex", "fragment" };
+        for (const auto& s : process_sections) {
+            std::string& current_section = bmx_data.texts[s];
+            std::vector<std::string> lines{};
+
+            int begin_index = 0;
+            for (int i = 0; i < current_section.size(); i++) {
+                if (current_section[i] == '\n') {
+                    lines.push_back(current_section.substr(begin_index, i - begin_index));
+                    begin_index = i + 1;
+                }
+            }
+            lines.push_back(current_section.substr(begin_index, current_section.size() - 1));
+
+            for (std::string& l : lines) {
+                if (l.substr(0, 8) == "@include") {
+                    int index = l.find(' ');
+                    while (index != l.npos) {
+                        l.replace(index, 1, "");
+                        index = l.find(' ');
+                    }
+
+                    l = l.substr(8, l.size() - 8);
+                    l = l.substr(0, l.size() - 1);
+                    if (bmx_data.texts.find(l) == bmx_data.texts.end()) {
+                        throw std::runtime_error("failed to process includer command \"@include(" + l + ")\"!");
+                    }
+                    l = bmx_data.texts[l];
+                }
+            }
+
+            current_section.clear();
+            for (std::string& l : lines) {
+                current_section.append(l + "\n");
+            }
+        }
+    }
+
     void checkShaderStatus(unsigned int id, bool is_program = false) {
         GLint success = false;
         char info_log[1024];
@@ -39,6 +78,7 @@ namespace PBRV {
             throw std::runtime_error("failed to find fragment block in shaders!");
         }
 
+        process_includer(shader_raw);
         const char* vertex_code = shader_raw.texts["vertex"].c_str();
         const char* fragment_code = shader_raw.texts["fragment"].c_str();
 
@@ -80,7 +120,7 @@ namespace PBRV {
         return m_id;
     }
 
-    void Shader::use() {
+    void Shader::use() const {
         glUseProgram(m_id);
     }
 

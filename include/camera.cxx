@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "Camera.h"
 #include <cmath>
 
 namespace PBRV {
@@ -6,7 +6,7 @@ namespace PBRV {
         this->position = position;
         this->up = mas::normalize(up);
         this->front = mas::normalize(center - position);
-        this->left = mas::normalize(mas::cross(this->up, front));
+        this->left = mas::normalize(mas::cross(up, front));
         this->rt_front = this->front;
         this->rt_left = this->left;
     }

@@ -20,7 +20,7 @@ namespace PBRV {
         Shader(const Shader&) = delete;
         Shader& operator=(const Shader&) = delete;
         
-        Shader(std::fstream& bmx_shader);
+        explicit Shader(std::fstream& bmx_shader);
         ~Shader();
 
         // get GLShader object id
@@ -28,7 +28,7 @@ namespace PBRV {
         GLuint get_id() const;
 
         // active shader object
-        void use();
+        void use() const;
 
         /* set shader uniform variable */
         void set_bool(const std::string& name, bool value) const;

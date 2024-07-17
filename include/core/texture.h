@@ -39,7 +39,7 @@ namespace PBRV {
         GLuint get_id() const;
 
         // bind texture to sampler
-        void bind_sampler(GLenum sampler_id);
+        void bind_sampler(GLenum sampler_id) const;
 
     private:
         bool has_destroyed = true;

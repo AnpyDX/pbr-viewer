@@ -1,6 +1,5 @@
-/**
- * PBR-Viewer
- * >> Free Camera Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief first person free-camera object
  */
 
 #pragma once
