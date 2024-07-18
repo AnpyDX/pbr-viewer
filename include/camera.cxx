@@ -1,8 +1,9 @@
 #include "Camera.h"
 #include <cmath>
+#include <imgui/imgui.h>
 
 namespace PBRV {
-    Camera::Camera(mas::vec3 position, mas::vec3 center, mas::vec3 up) {
+    Camera::Camera(GLFWwindow* window, mas::vec3 position, mas::vec3 center, mas::vec3 up): window(window) {
         this->position = position;
         this->up = mas::normalize(up);
         this->front = mas::normalize(center - position);
@@ -21,12 +22,64 @@ namespace PBRV {
         return result;
     }
 
+    mas::mat4 Camera::get_perspective() {
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        return mas::perspective(fov, static_cast<float>(width) / static_cast<float>(height), near_plane, far_plane);
+    }
+
     mas::vec3 Camera::get_position() {
         return position;
     }
 
     mas::vec3 Camera::get_direction() {
         return rt_front;
+    }
+
+    void Camera::update_input(float delta_time) {
+        mas::vec2 camera_movement(0.0f);
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            camera_movement.y += 1.0f;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            camera_movement.y -= 1.0f;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+            camera_movement.x -= 1.0f;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            camera_movement.x += 1.0f;
+        }
+
+        camera_movement = mas::normalize(camera_movement) * speed * delta_time;
+        this->position_controller(camera_movement.y, camera_movement.x);
+
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            if (!ImGui::IsAnyItemActive()) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            
+                double xpos, ypos;
+                glfwGetCursorPos(window, &xpos, &ypos);
+                if (!mouse_released) {
+                    mas::vec2 view_offset(static_cast<float>(xpos) - last_mouse_pos.x, last_mouse_pos.y - static_cast<float>(ypos));
+                    view_offset = view_offset * sensitivity * delta_time;
+                    this->view_controller(view_offset.x, view_offset.y);
+                }
+                else {
+                    mouse_released = false;
+                }
+
+                last_mouse_pos.x = static_cast<float>(xpos);
+                last_mouse_pos.y = static_cast<float>(ypos);
+            }
+        }
+        else {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            mouse_released = true;
+        }
     }
 
     void Camera::position_controller(float front_offset, float right_offset) {

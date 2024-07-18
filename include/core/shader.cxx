@@ -136,19 +136,19 @@ namespace PBRV {
         glUniform1f(glGetUniformLocation(m_id, name.c_str()), value);
     }
 
-    void Shader::set_vec2(const std::string& name, mas::vec2& value) const {
+    void Shader::set_vec2(const std::string& name, mas::vec2 value) const {
         glUniform2fv(glGetUniformLocation(m_id, name.c_str()), 1, mas::get_value_ptr(value));
     }
 
-    void Shader::set_vec3(const std::string& name, mas::vec3& value) const {
+    void Shader::set_vec3(const std::string& name, mas::vec3 value) const {
         glUniform3fv(glGetUniformLocation(m_id, name.c_str()), 1, mas::get_value_ptr(value));
     }
 
-    void Shader::set_vec4(const std::string& name, mas::vec4& value) const {
+    void Shader::set_vec4(const std::string& name, mas::vec4 value) const {
         glUniform4fv(glGetUniformLocation(m_id, name.c_str()), 1, mas::get_value_ptr(value));
     }
 
-    void Shader::set_mat4(const std::string& name, mas::mat4& value) const {
+    void Shader::set_mat4(const std::string& name, mas::mat4 value) const {
         glUniformMatrix4fv(glGetUniformLocation(m_id, name.c_str()), 1, GL_FALSE, mas::get_value_ptr(value));
     }
 }

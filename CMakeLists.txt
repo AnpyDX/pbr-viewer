@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 project("PBRV")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # config thirdparty
 add_subdirectory("thirdparty")
@@ -20,8 +20,11 @@ add_executable(
         include/core/framebuffer.cxx
         include/core/texture.cxx
         include/core/shader.cxx
-        include/Camera.cxx
         include/SceneManager.cxx
+        include/Camera.cxx
+        include/Model.cxx
+        include/Light.cxx
+        include/SkyBox.cxx
 )
 
 # headers & libraries
