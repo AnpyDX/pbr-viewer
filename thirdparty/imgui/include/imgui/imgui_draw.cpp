@@ -418,7 +418,7 @@ void ImGui::StyleColorsRocky(ImGuiStyle* dst)
     style->WindowRounding = 3;
     style->ChildRounding = 3;
     style->FrameRounding = 2;
-    style->PopupRounding = 2;
+    style->PopupRounding = 4;
     style->ScrollbarRounding = 9;
     style->GrabRounding = 1;
     style->TabRounding = 4;
