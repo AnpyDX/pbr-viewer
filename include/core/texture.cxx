@@ -1,10 +1,11 @@
 #define STB_IMAGE_IMPLEMENTATION
-
 #include "texture.h"
 
 #include <stdexcept>
 
 #include <stb_image.h>
+
+#include <iostream>
 
 namespace PBRV {
     Texture::Texture(TextureInfo& create_info, int width, int height) {
@@ -29,6 +30,9 @@ namespace PBRV {
         if (!tex_data) {
             throw std::runtime_error("failed to open texture: " + tex_path + " !");
         }
+
+        create_info.src_format = channels == 4 ? GL_RGBA : GL_RGB;
+        create_info.dst_format = create_info.src_format;
 
         glGenTextures(1, &m_id);
         glBindTexture(GL_TEXTURE_2D, m_id);

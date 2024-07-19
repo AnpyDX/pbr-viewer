@@ -1,6 +1,5 @@
-/**
- * PBR-Viewer
- * >> Texture Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief core.texture object
  */
 
 #pragma once
@@ -11,12 +10,12 @@
 
 namespace PBRV {
     struct TextureInfo {
-        GLenum src_format = GL_RGB;
-        GLenum dst_format = GL_RGB;
-        GLenum wrap_s = GL_REPEAT;
-        GLenum wrap_t = GL_REPEAT;
-        GLenum min_filter = GL_LINEAR;
-        GLenum mag_filter = GL_LINEAR;
+        GLint src_format = GL_RGB;
+        GLint dst_format = GL_RGB;
+        GLint wrap_s = GL_REPEAT;
+        GLint wrap_t = GL_REPEAT;
+        GLint min_filter = GL_LINEAR;
+        GLint mag_filter = GL_LINEAR;
         GLint mipmap_level = 0;
     };
 
