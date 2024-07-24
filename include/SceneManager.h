@@ -14,16 +14,34 @@
 #include "Light.h"
 #include "SkyBox.h"
 
+namespace PBRV {
+    struct Transform {
+        mas::vec3 translate { 0.0f };
+        mas::vec3 scale { 1.0f };
+        mas::vec3 rotate { 0.0f };
+    };
+
+    struct ShaderObject {
+        std::unique_ptr<PBRV::Core::Shader> object {};
+        std::string path {};
+    };
+
+    struct ModelObject {
+        std::unique_ptr<PBRV::Model> object {};
+        PBRV::Transform transform {};
+        std::string shader {};
+    };
+}
 
 namespace PBRV {
 
     class SceneManager {
     public:
         // create shader resource
-        void new_shader(const std::string& name, const std::string& path);
+        void new_shader(const std::string& name, const std::string& path, bool allow_override = false);
 
         // add new model to scene
-        void new_model(const std::string& name, std::unique_ptr<Model> &&model, const std::string& shader_name);
+        void new_model(const std::string& name, std::unique_ptr<Model> &&model, const std::string& shader_name, const Transform& transform);
 
         // add new pointlight to scene
         void new_pointlight();
@@ -44,15 +62,15 @@ namespace PBRV {
         void remove_sunlight(const std::string& name);
 
         // render scene to target Frambuffer
-        void render(Camera* camera, Framebuffer* target);
+        void render(Camera* camera, Core::Framebuffer* target);
 
-    private:
-        std::map<std::string, std::unique_ptr<Model>> models {};
-        std::map<std::string, PointLight>             pointlights {};
-        std::map<std::string, SunLight>               sunlights {};
+    public:
+        std::map<std::string, ModelObject> models {};
+        std::map<std::string, PointLight>  pointlights {};
+        std::map<std::string, SunLight>    sunlights {};
         
         std::unique_ptr<SkyBox> skybox {};
 
-        std::map<std::string, std::unique_ptr<Shader>> shaders {};
+        std::map<std::string, ShaderObject> shaders {};
     };
 }

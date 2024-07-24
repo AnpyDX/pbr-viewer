@@ -10,6 +10,7 @@
 
 #include "utils/console.h"
 #include "utils/imgui_utils.h"
+#include "utils/ticker.h"
 
 #include "core/shader.h"
 #include "core/vertexbuffer.h"
@@ -19,6 +20,14 @@
 
 #include "Camera.h"
 #include "SceneManager.h"
+
+// default app settings
+constexpr uint32_t DEFAULT_WIDTH = 1920;
+constexpr uint32_t DEFAULT_HEIGHT = 1080;
+constexpr float    DEFAULT_MAX_FPS = 60.0f;
+// -------------------
+
+constexpr float MIN_DELTATIME = 1.0f / DEFAULT_MAX_FPS;
 
 struct VertexType {
     mas::vec3 position;
@@ -53,7 +62,7 @@ private:
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        app_window = glfwCreateWindow(1920, 1080, "PBR Viewer", nullptr, nullptr);
+        app_window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, "PBR Viewer", nullptr, nullptr);
         if (app_window == nullptr) {
             glfwTerminate();
             throw std::runtime_error("failed to create window!");
@@ -67,7 +76,7 @@ private:
             throw std::runtime_error("failed to initialize GLAD!");
         }
 
-        glfwSwapInterval(true); // enable v-sync
+        glfwSwapInterval(false);
         glfwSetWindowUserPointer(app_window, reinterpret_cast<void*>(this));
 
         // get profiler information
@@ -89,11 +98,15 @@ private:
         app_scene->new_shader("default", "assets/shaders/universal_soild.shader");
 
         app_scene->new_model(
-            "main_model",
+            "model1",
             PBRV::Model::Builder()
             .from_file("assets/models/WaterBottle/WaterBottle.gltf")
             .build(),
-            "default"
+            "default",
+            PBRV::Transform {
+                .translate = mas::vec3(0.0, 0.0, -1.0),
+                .scale = mas::vec3(0.5f),
+            }
         );
         
         // create camera
@@ -105,7 +118,7 @@ private:
         );
 
         app_camera->speed = 0.4f;
-        app_camera->sensitivity = 3.0f;
+        app_camera->sensitivity = 1.0f;
     }
 
     void prepare_postprocess() {
@@ -117,31 +130,32 @@ private:
         };
         std::vector<unsigned int> square_indices = { 0, 1, 2, 2, 3, 0 };
         
-        PBRV::VertexBufferInfo vb_info{};
+        PBRV::Core::VertexBufferInfo vb_info{};
         vb_info.set_buffer(square_vertices.data(), square_vertices.size() * sizeof(VertexType))
                 .add_attribute(0, 3, GL_FLOAT, GL_FALSE, 20, 0)
                 .add_attribute(1, 2, GL_FLOAT, GL_FALSE, 20, 12);
-        pp_square_vb = std::make_unique<PBRV::VertexBuffer>(vb_info);
+        pp_square_vb = std::make_unique<PBRV::Core::VertexBuffer>(vb_info);
 
-        pp_square_ib = std::make_unique<PBRV::IndexBuffer>(square_indices.data(), square_indices.size() * sizeof(unsigned int), square_indices.size());
+        pp_square_ib = std::make_unique<PBRV::Core::IndexBuffer>(square_indices.data(), square_indices.size() * sizeof(unsigned int), square_indices.size());
 
         pp_present_shader = load_shader("assets/shaders/frame_present.shader");
         pp_blur_shader = load_shader("assets/shaders/gaussian_blur.shader");
 
-        create_framebuffer_resource(1920, 1080);
+        create_framebuffer_resource(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
     void main_loop() {  
         float time_ticker = 0;
-        int max_gui_blur_times = 2;
 
         while (!glfwWindowShouldClose(app_window)) {
+
             auto current_time = static_cast<float>(glfwGetTime());
             float delta_time = current_time - time_ticker;
-            frame_per_second = 1.0f / delta_time;
+            if (delta_time < MIN_DELTATIME) continue;
+            fps_ticker.set_tick(1.0f / delta_time);
             time_ticker = current_time;
 
-            detect_input(delta_time);
+            detect_input();
 
             glEnable(GL_DEPTH_TEST);
             glDepthMask(GL_TRUE);
@@ -186,6 +200,7 @@ private:
             glStencilMask(0x00);
             glStencilFunc(GL_EQUAL, 1, 0xFF);
 
+            int max_gui_blur_times = ui_context.enable_blur ? 200 : 2;
             for (int i = 1; i < max_gui_blur_times + 1; i++) {
                 if (i & 2) {
                     pp_framebuffer1->bind();
@@ -208,7 +223,7 @@ private:
             }
             
             /* Present */
-            PBRV::Framebuffer::bind_default();
+            PBRV::Core::Framebuffer::bind_default();
             glDisable(GL_STENCIL_TEST);
             glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -239,15 +254,19 @@ private:
         app_ptr->recreate_framebuffers(width, height);
     }
 
-    void detect_input(float delta_time) {
+    void detect_input() {
         if (glfwGetKey(app_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(app_window, true);
         }
 
-        app_camera->update_input(delta_time);
+        if (PBRV::UGetOnceKey<0>(ImGuiKey_M)) {
+            ui_context.draw_inspector = !ui_context.draw_inspector;
+        }
+
+        app_camera->update_input(std::clamp(1.0f / fps_ticker.get_avg(), 0.00001f, 1.0f));
     }
 
-    static std::unique_ptr<PBRV::Shader> load_shader(const std::string& path) {
+    static std::unique_ptr<PBRV::Core::Shader> load_shader(const std::string& path) {
         PBRV::UConsole::debug("loading shader: " + path);
         std::fstream shader_file {};
         shader_file.exceptions(std::ifstream::badbit);
@@ -256,7 +275,7 @@ private:
             throw std::runtime_error("failed to open shader: " + path + "!");
         }
 
-        return std::move(std::make_unique<PBRV::Shader>(shader_file));
+        return std::move(std::make_unique<PBRV::Core::Shader>(shader_file));
     }
 
     void recreate_framebuffers(int width, int height) {
@@ -265,15 +284,15 @@ private:
     }
 
     void create_framebuffer_resource(int width, int height) {
-        PBRV::TextureInfo frame_tex_info {};
+        PBRV::Core::TextureInfo frame_tex_info {};
         frame_tex_info.wrap_s = GL_MIRRORED_REPEAT;
         frame_tex_info.wrap_t = GL_MIRRORED_REPEAT;
 
-        pp_color_attach1 = std::make_unique<PBRV::Texture>(frame_tex_info, width, height);
-        pp_color_attach2 = std::make_unique<PBRV::Texture>(frame_tex_info, width, height);
+        pp_color_attach1 = std::make_unique<PBRV::Core::Texture>(frame_tex_info, width, height);
+        pp_color_attach2 = std::make_unique<PBRV::Core::Texture>(frame_tex_info, width, height);
 
-        pp_framebuffer1 = std::make_unique<PBRV::Framebuffer>(pp_color_attach1->get_id());
-        pp_framebuffer2 = std::make_unique<PBRV::Framebuffer>(pp_color_attach2->get_id());
+        pp_framebuffer1 = std::make_unique<PBRV::Core::Framebuffer>(pp_color_attach1->get_id());
+        pp_framebuffer2 = std::make_unique<PBRV::Core::Framebuffer>(pp_color_attach2->get_id());
 
         glGenRenderbuffers(1, &pp_shared_rbo);
         glBindRenderbuffer(GL_RENDERBUFFER, pp_shared_rbo);
@@ -284,7 +303,7 @@ private:
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, pp_shared_rbo);
         pp_framebuffer2->bind();
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, pp_shared_rbo);
-        PBRV::Framebuffer::bind_default();
+        PBRV::Core::Framebuffer::bind_default();
     }
 
     void destroy_framebuffer_resource() {
@@ -298,39 +317,181 @@ private:
     void draw_gui(bool frame_only) {
         PBRV::begin_imgui_frame();
 
-        // profiler
-        const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+        ImGui::ShowDemoWindow();
+
+        if (ui_context.draw_inspector)
+            DIMGUI_Inspector();
+
+        if (ui_context.draw_profiler)
+            DIMGUI_Profiler();
+
+        if (ui_context.draw_settigs)
+            DIMGUI_SettingsWindow();
+        
+        PBRV::render_imgui(frame_only);
+    }
+
+    void DIMGUI_Inspector() {
+
+        ImGui::SetNextWindowPos(ImVec2(8, 156), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(488, 525), ImGuiCond_Once);
+        if (!ImGui::Begin("inspector", nullptr, ImGuiWindowFlags_MenuBar)) {
+            ImGui::End();
+            return;
+        }
+
+        {
+            PBRV::UIDTicker btn_ticker {};
+        
+            if (ImGui::BeginMenuBar()) {
+                if (ImGui::BeginMenu("Menu")) {
+
+                    if (ImGui::MenuItem("Open (.scene)")) {
+                        std::cout << "open scene" << std::endl;
+                    }
+
+                    if (ImGui::MenuItem("Settings")) {
+                        ui_context.draw_settigs = true;
+                    }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Exit", "Esc")) {
+                        glfwSetWindowShouldClose(app_window, true);
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("New")) {
+
+                    ImGui::SeparatorText("Resources");
+                    if (ImGui::MenuItem("Shader")) {}
+
+                    ImGui::SeparatorText("Node objects");
+                    if (ImGui::MenuItem("Model")) {}
+                    if (ImGui::MenuItem("Light")) {}
+                    if (ImGui::MenuItem("Skybox")) {}
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenuBar();
+            }
+
+            if (ImGui::BeginTabBar("##tab")) {
+                if (ImGui::BeginTabItem("Scene", nullptr, ImGuiTabItemFlags_None)) {
+                    if (ImGui::BeginTable("##scene_split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
+                    {
+                        ImGui::TableSetupScrollFreeze(0, 1);
+                        ImGui::TableSetupColumn("Nodes");
+                        ImGui::TableSetupColumn("Attributes");
+                        ImGui::TableHeadersRow();
+
+                        
+
+                        ImGui::EndTable();
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Resources", nullptr, ImGuiTabItemFlags_None)) {
+                    ImGui::SeparatorText("Shaders");
+                    
+                    for (auto& shader_object : app_scene->shaders) {
+                        ImGui::PushID(btn_ticker.get());
+
+                        ImGui::BulletText("%s", shader_object.first.c_str());
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("-> %s", shader_object.second.path.c_str());
+
+                        if (ImGui::Button("reload")) {
+                            app_scene->new_shader(shader_object.first, shader_object.second.path, true);
+                        }
+
+                        ImGui::SameLine();
+                        if (ImGui::Button("delete")) {
+                            std::cout << shader_object.first << std::endl;
+                            app_scene->remove_shader(shader_object.first);
+                            ImGui::PopID();
+                            break;
+                        }
+
+                        ImGui::Separator();
+
+                        ImGui::PopID();
+                    }
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
+        
+        }
+        ImGui::End();
+    }
+
+    void DIMGUI_Profiler() {
         ImGui::SetNextWindowPos(ImVec2(8, 8), ImGuiCond_None);
         ImGui::SetNextWindowSize(ImVec2(180, 142), ImGuiCond_None);
+        ImGuiWindowFlags profiler_window_flags = 0;
+        profiler_window_flags |= ImGuiWindowFlags_NoMove;
+        profiler_window_flags |= ImGuiWindowFlags_NoTitleBar;
+        profiler_window_flags |= ImGuiWindowFlags_NoResize;
+
+        if(!ImGui::Begin("profiler", nullptr, profiler_window_flags)) {
+            ImGui::End();
+            return;
+        }
+
         {
-            ImGuiWindowFlags profiler_window_flags = 0;
-            profiler_window_flags |= ImGuiWindowFlags_NoMove;
-            profiler_window_flags |= ImGuiWindowFlags_NoTitleBar;
-            profiler_window_flags |= ImGuiWindowFlags_NoResize;
-
-            bool pop_window = true;
-
-            ImGui::Begin("profiler", &pop_window, profiler_window_flags);
             ImGui::Text("@profiler");
             ImGui::Text("OpenGL %s", backend_version.c_str());
             ImGui::Text("GPU: %s", gpu_info.c_str());
-            ImGui::Text("FPS: %i", static_cast<int>(frame_per_second));
+            ImGui::Text("FPS: %i", static_cast<int>(fps_ticker.get_avg()));
 
             static float values[90] = {};
             static int values_offset = 0;
             static double refresh_time = 0.0;
             while (refresh_time < ImGui::GetTime())
             {
-                values[values_offset] = frame_per_second;
+                values[values_offset] = fps_ticker.get_avg();
                 values_offset = (values_offset + 1) % IM_ARRAYSIZE(values);
                 refresh_time += 1.0f / 60.0f;
             }
 
             ImGui::PlotLines("avg", values, IM_ARRAYSIZE(values), values_offset, nullptr, 0.0f, FLT_MAX, ImVec2(0.0f, 30.0f));
+        }
+        ImGui::End();
+    }
+
+    void DIMGUI_SettingsWindow() {
+        ImGui::SetNextWindowSize(ImVec2(488, 525), ImGuiCond_Once);
+        if (!ImGui::Begin("settings", &ui_context.draw_settigs)) {
             ImGui::End();
+            return;
         }
 
-        PBRV::render_imgui(frame_only);
+        {
+            if(!ImGui::CollapsingHeader("General")) {
+                if (ImGui::BeginTable("general_split", 2))
+                {
+                    ImGui::TableNextColumn(); ImGui::Checkbox("enable profiler", &ui_context.draw_profiler);
+                    ImGui::TableNextColumn(); ImGui::Checkbox("enable window blur", &ui_context.enable_blur);
+                    ImGui::EndTable();
+                }
+            }
+
+            if (!ImGui::CollapsingHeader("Rendering")) {
+
+            }
+        }
+        ImGui::End();
+    }
+
+    void DIMGUI_DrawNodeModel() {
+
     }
 
 private:
@@ -341,21 +502,28 @@ private:
     std::shared_ptr<PBRV::Camera> app_camera;
 
     // post-process resources
-    std::unique_ptr<PBRV::Shader> pp_present_shader;
-    std::unique_ptr<PBRV::Shader> pp_blur_shader;
-    std::unique_ptr<PBRV::VertexBuffer> pp_square_vb;
-    std::unique_ptr<PBRV::IndexBuffer> pp_square_ib;
+    std::unique_ptr<PBRV::Core::Shader> pp_present_shader;
+    std::unique_ptr<PBRV::Core::Shader> pp_blur_shader;
+    std::unique_ptr<PBRV::Core::VertexBuffer> pp_square_vb;
+    std::unique_ptr<PBRV::Core::IndexBuffer> pp_square_ib;
 
-    std::unique_ptr<PBRV::Texture> pp_color_attach1;
-    std::unique_ptr<PBRV::Texture> pp_color_attach2;
-    std::unique_ptr<PBRV::Framebuffer> pp_framebuffer1;
-    std::unique_ptr<PBRV::Framebuffer> pp_framebuffer2;
+    std::unique_ptr<PBRV::Core::Texture> pp_color_attach1;
+    std::unique_ptr<PBRV::Core::Texture> pp_color_attach2;
+    std::unique_ptr<PBRV::Core::Framebuffer> pp_framebuffer1;
+    std::unique_ptr<PBRV::Core::Framebuffer> pp_framebuffer2;
     GLuint pp_shared_rbo = 0;
 
     // application resouces
     std::string backend_version {};
     std::string gpu_info {};
-    float frame_per_second = 0;
+    PBRV::UFPSTicker<64> fps_ticker {};
+
+    struct {
+        bool draw_inspector = true;
+        bool draw_profiler = true;
+        bool draw_settigs = false;
+        bool enable_blur = true;
+    } ui_context {};
 };
 
 int main() {

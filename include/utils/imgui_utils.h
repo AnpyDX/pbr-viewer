@@ -1,11 +1,11 @@
-/**
- * @file imgui_utils.h
- * @brief IMGUI Utility
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief imgui utility
  */
 
 #pragma once
 #include <string>
 #include <vector>
+#include <array>
 #include <sstream>
 
 #include <imgui/imgui.h>
@@ -88,5 +88,26 @@ namespace PBRV {
         }
 
         return result;
+    }
+
+    template <uint8_t CacheIndex>
+    bool UGetOnceKey(ImGuiKey key) {
+        static std::array<bool, 5> OnceKeyMap = {
+            true, true, true, true, true
+        };
+
+        if (!OnceKeyMap[CacheIndex]) {
+            if (!ImGui::IsKeyDown(key)) {
+                OnceKeyMap[CacheIndex] = true;
+            }
+            return false;
+        }
+        
+        if (ImGui::IsKeyDown(key)) {
+            OnceKeyMap[CacheIndex] = false;
+            return true;
+        }
+        
+        return false;
     }
 }

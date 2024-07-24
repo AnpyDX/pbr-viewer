@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace PBRV {
+namespace PBRV::Core {
     VertexBuffer::VertexBuffer(VertexBufferInfo& create_info) {
         if (create_info.attributes.empty()) {
             throw std::runtime_error("attribute_size is zero. Failed to create vertexbuffer!");

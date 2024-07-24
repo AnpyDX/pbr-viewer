@@ -1,5 +1,6 @@
 #include "Camera.h"
 #include <cmath>
+#include <algorithm>
 #include <imgui/imgui.h>
 
 namespace PBRV {
@@ -56,15 +57,21 @@ namespace PBRV {
 
         camera_movement = mas::normalize(camera_movement) * speed * delta_time;
         this->position_controller(camera_movement.y, camera_movement.x);
-
+        
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-            if (!ImGui::IsAnyItemActive()) {
+            if (ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused()) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
+            else {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             
-                double xpos, ypos;
-                glfwGetCursorPos(window, &xpos, &ypos);
+                double mouse_x, mouse_y;
+                glfwGetCursorPos(window, &mouse_x, &mouse_y);
+                auto xpos = static_cast<float>(mouse_x);
+                auto ypos = static_cast<float>(mouse_y);
+
                 if (!mouse_released) {
-                    mas::vec2 view_offset(static_cast<float>(xpos) - last_mouse_pos.x, last_mouse_pos.y - static_cast<float>(ypos));
+                    mas::vec2 view_offset(xpos - last_mouse_pos.x, last_mouse_pos.y - ypos);
                     view_offset = view_offset * sensitivity * delta_time;
                     this->view_controller(view_offset.x, view_offset.y);
                 }
@@ -72,14 +79,15 @@ namespace PBRV {
                     mouse_released = false;
                 }
 
-                last_mouse_pos.x = static_cast<float>(xpos);
-                last_mouse_pos.y = static_cast<float>(ypos);
+                last_mouse_pos.x = xpos;
+                last_mouse_pos.y = ypos;
             }
         }
         else {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             mouse_released = true;
         }
+        
     }
 
     void Camera::position_controller(float front_offset, float right_offset) {
@@ -90,5 +98,7 @@ namespace PBRV {
     void Camera::view_controller(float right_offset, float up_offset) {
         yaw -= right_offset;
         pitch += up_offset;
+
+        pitch = std::clamp(pitch, -89.5f, 89.5f);
     }
 }

@@ -1,6 +1,5 @@
-/**
- * PBR-Viewer
- * >> Shader Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief core.shader object
  */
 
 #pragma once
@@ -12,7 +11,7 @@
 #include <string>
 #include <mas/mas.hpp>
 
-namespace PBRV {
+namespace PBRV::Core {
     
     class Shader {
     public:

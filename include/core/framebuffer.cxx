@@ -1,6 +1,6 @@
 #include "framebuffer.h"
 
-namespace PBRV {
+namespace PBRV::Core {
     Framebuffer::Framebuffer(GLuint color_attachment, bool has_depth_stencil, int width, int height): has_rbo(has_depth_stencil) {
         glGenFramebuffers(1, &m_id);
         glBindFramebuffer(GL_FRAMEBUFFER, m_id);

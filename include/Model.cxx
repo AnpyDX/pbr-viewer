@@ -25,16 +25,6 @@ namespace PBRV {
         return *this;
     }
 
-    Model::Builder& Model::Builder::set_transform(Transform& transform) {
-        build_transform = transform;
-        return *this;
-    }
-
-    Model::Builder& Model::Builder::set_shader(Shader *shader) {
-        build_shader = shader;
-        return *this;
-    }
-
     std::unique_ptr<Model> Model::Builder::build() {
         Assimp::Importer importer;
         const aiScene *scene = importer.ReadFile(build_path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
@@ -48,9 +38,6 @@ namespace PBRV {
         auto result = std::make_unique<Model>();
 
         process_node(scene->mRootNode, scene, result.get());
-
-        result->transform = build_transform;
-        result->shader = build_shader;
 
         return result;
     }
@@ -95,13 +82,13 @@ namespace PBRV {
 
             vertices[i] = vertex;
         }
-        VertexBufferInfo vbInfo{};
+        Core::VertexBufferInfo vbInfo{};
         int stride_size = sizeof(float) * 8;
         vbInfo.set_buffer(vertices.data(), vertices.size() * sizeof(Vertex))
                 .add_attribute(0, 3, GL_FLOAT, GL_FALSE, stride_size, 0)
                 .add_attribute(1, 3, GL_FLOAT, GL_FALSE, stride_size, sizeof(mas::vec3))
                 .add_attribute(2, 2, GL_FLOAT, GL_FALSE, stride_size, sizeof(mas::vec3) * 2);
-        result.vb = std::make_unique<VertexBuffer>(vbInfo);
+        result.vb = std::make_unique<Core::VertexBuffer>(vbInfo);
 
         for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
             aiFace face = mesh->mFaces[i];
@@ -110,7 +97,7 @@ namespace PBRV {
                 indices.push_back(face.mIndices[j]);
             }
         }
-        result.ib = std::make_unique<IndexBuffer>(indices.data(), indices.size() * sizeof(unsigned int), indices.size());
+        result.ib = std::make_unique<Core::IndexBuffer>(indices.data(), indices.size() * sizeof(unsigned int), indices.size());
 
         if (mesh->mMaterialIndex >= 0) {
             aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
@@ -124,7 +111,7 @@ namespace PBRV {
         return result;
     }
 
-    Texture* Model::Builder::load_texture(aiMaterial *mat, aiTextureType type, Model *model) {
+    Core::Texture* Model::Builder::load_texture(aiMaterial *mat, aiTextureType type, Model *model) {
         if (mat->GetTextureCount(type) == 0) return nullptr;
 
         aiString textureName;
@@ -132,24 +119,17 @@ namespace PBRV {
         std::string fullPath = current_dir + "/" + std::string(textureName.C_Str());
 
         if (model->textures.find(fullPath) == model->textures.end()) {
-            TextureInfo texInfo {};
-            model->textures[fullPath] = std::make_unique<Texture>(fullPath, texInfo);
+            Core::TextureInfo texInfo {};
+            texInfo.min_filter = GL_LINEAR_MIPMAP_LINEAR; // FIXME: restrict mipmap max_level and base_level
+            model->textures[fullPath] = std::make_unique<Core::Texture>(fullPath, texInfo);
         }
 
         return model->textures[fullPath].get();
     }
 
-    void Model::draw() {
+    void Model::draw(Core::Shader* shader) {
         for (auto& mesh : meshes) {
             shader->use();
-
-            mas::mat4 T_model(1.0f);
-            T_model = mas::translate(T_model, transform.translate);
-            T_model = mas::scale(T_model, transform.scale);
-            T_model = mas::rotate(T_model, mas::vec3(1.0, 0.0, 0.0), transform.rotate.x);
-            T_model = mas::rotate(T_model, mas::vec3(0.0, 1.0, 0.0), transform.rotate.y);
-            T_model = mas::rotate(T_model, mas::vec3(0.0, 0.0, 1.0), transform.rotate.z);
-            shader->set_mat4("PBRV_Transform_Model", T_model);
 
             bind_sampler(shader, mesh.mat.albdo, 0, "PBRV_Texture0");
             bind_sampler(shader, mesh.mat.normal, 1, "PBRV_Texture1");
@@ -163,7 +143,7 @@ namespace PBRV {
         }
     }
 
-    void Model::bind_sampler(Shader const * shader, Texture const* texture, uint8_t offset, const std::string& uniform_name) {
+    void Model::bind_sampler(Core::Shader const * shader, Core::Texture const* texture, uint8_t offset, const std::string& uniform_name) {
         if (!texture) return;
 
         texture->bind_sampler(GL_TEXTURE0 + offset);

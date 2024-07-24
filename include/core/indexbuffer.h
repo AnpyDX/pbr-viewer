@@ -1,6 +1,5 @@
-/**
- * PBR-Viewer
- * >> IndexBuffer Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief core.indexbuffer object
  */
 
 #pragma once
@@ -9,7 +8,7 @@
 
 #include <cstdint>
 
-namespace PBRV {
+namespace PBRV::Core {
     class IndexBuffer {
     public:
         IndexBuffer() = delete;

@@ -1,12 +1,11 @@
-/**
- * PBR-Viewer
- * >> FrameBuffer Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief core.framebuffer object
  */
-
+ 
 #pragma once
 #include "contain_gl.h"
 
-namespace PBRV {
+namespace PBRV::Core {
 
     class Framebuffer {
     public:

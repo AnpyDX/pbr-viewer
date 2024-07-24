@@ -1,6 +1,5 @@
-/**
- * PBR-Viewer
- * >> VertexBuffer Object
+/** PBRV Project (https://github.com/anpydx/pbr-viewer)
+ * @brief core.vertexbuffer object
  */
 
 #pragma once
@@ -9,7 +8,7 @@
 
 #include <vector>
 
-namespace PBRV {
+namespace PBRV::Core {
     struct VertexAttribute {
         GLuint    location;
         GLint     element_count;

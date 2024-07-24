@@ -67,7 +67,7 @@ namespace {
     }
 }
 
-namespace PBRV {
+namespace PBRV::Core {
     Shader::Shader(std::fstream& bmx_shader) {
         BMX::Data shader_raw {};
         shader_raw = BMX::loads(bmx_shader);

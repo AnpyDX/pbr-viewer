@@ -3,12 +3,11 @@
  */
 
 #pragma once
-
 #include "contain_gl.h"
 
 #include <string>
 
-namespace PBRV {
+namespace PBRV::Core {
     struct TextureInfo {
         GLint src_format = GL_RGB;
         GLint dst_format = GL_RGB;

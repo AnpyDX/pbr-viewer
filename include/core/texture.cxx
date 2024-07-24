@@ -5,9 +5,7 @@
 
 #include <stb_image.h>
 
-#include <iostream>
-
-namespace PBRV {
+namespace PBRV::Core {
     Texture::Texture(TextureInfo& create_info, int width, int height) {
 
         glGenTextures(1, &m_id);

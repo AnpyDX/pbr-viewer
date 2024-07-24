@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace PBRV {
+namespace PBRV::Core {
     IndexBuffer::IndexBuffer(void* data_ptr, uint32_t size, uint32_t count): m_count(count) {
         if (!data_ptr || size == 0 || count == 0) {
             throw std::runtime_error("indexbuffer get invalid buffer data! Failed to create indexbuffer.");
